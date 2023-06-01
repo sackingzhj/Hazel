@@ -121,6 +121,9 @@ namespace Hazel {
 		RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 		RenderCommand::Clear();
 
+		m_Framebuffer->ClearAttachment(1, -1);
+
+
 		// Update scene
 		m_ActiveScene->OnUpdateEditor(ts, m_EditorCamera);
 
@@ -135,7 +138,7 @@ namespace Hazel {
 		if (mouseX >= 0 && mouseY >= 0 && mouseX < (int)viewportSize.x && mouseY < (int)viewportSize.y)
 		{
 			int pixelData = m_Framebuffer->ReadPixel(1, mouseX, mouseY);
-			HZ_CORE_WARN("Pixel data = {0}", pixelData);
+			m_SelectEntity = pixelData == -1 ? Entity() : Entity((entt::entity) pixelData, m_ActiveScene.get() );
 		}
 
 		m_Framebuffer->Unbind();
@@ -228,6 +231,7 @@ namespace Hazel {
 		ImGui::Text("Quads: %d", stats.QuadCount);
 		ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
 		ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
+		ImGui::Text("Select Entity: %s", m_SelectEntity ? m_SelectEntity.GetComponent<TagComponent>().Tag.c_str():"None");
 
 		ImGui::End();
 
@@ -322,6 +326,7 @@ namespace Hazel {
 
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<KeyPressedEvent>(HZ_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
+		dispatcher.Dispatch<MouseButtonPressedEvent>(HZ_BIND_EVENT_FN(EditorLayer::OnMouseButtonPressed));
 	}
 
 	bool EditorLayer::OnKeyPressed(KeyPressedEvent& e)
@@ -370,6 +375,14 @@ namespace Hazel {
 				m_GizmoType = ImGuizmo::OPERATION::SCALE;
 				break;
 		}
+	}
+
+	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
+	{
+		if (e.GetMouseButton() == Mouse::ButtonLeft)
+			if(m_ViewportHovered)
+				m_SceneHierarchyPanel.SetSelectedEntity(m_SelectEntity);
+		return false;
 	}
 
 	void EditorLayer::NewScene()
